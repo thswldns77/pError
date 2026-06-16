@@ -125,7 +125,7 @@ docker compose down
 - `S3`: React 대시보드 정적 파일 배포
 - `CloudWatch`: EC2/API 로그 및 지표 확인
 - `Security Group`: ALB, API, DB 접근 경계 분리
-- `IAM Role`: EC2에서 CloudWatch Agent 사용
+- `IAM`: AWS Academy 제공 `LabInstanceProfile`로 EC2 권한 연결
 
 주의: 이 프로젝트의 기본 작업에서는 실제 AWS 리소스를 만들지 않습니다.
 

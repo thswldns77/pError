@@ -9,6 +9,27 @@ data "aws_subnets" "default" {
   }
 }
 
+data "aws_ec2_instance_type_offerings" "app" {
+  location_type = "availability-zone"
+
+  filter {
+    name   = "instance-type"
+    values = [var.instance_type]
+  }
+}
+
+data "aws_subnets" "compute" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+
+  filter {
+    name   = "availability-zone"
+    values = data.aws_ec2_instance_type_offerings.app.locations
+  }
+}
+
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -107,31 +128,6 @@ resource "aws_cloudwatch_log_group" "api" {
   retention_in_days = 7
 }
 
-resource "aws_iam_role" "ec2" {
-  name = "${var.project_name}-ec2-role"
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      }
-    }]
-    Version = "2012-10-17"
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-  role       = aws_iam_role.ec2.name
-}
-
-resource "aws_iam_instance_profile" "ec2" {
-  name = "${var.project_name}-ec2-profile"
-  role = aws_iam_role.ec2.name
-}
-
 resource "aws_lb" "api" {
   name               = "${var.project_name}-alb"
   load_balancer_type = "application"
@@ -171,8 +167,19 @@ resource "aws_launch_template" "api" {
   image_id      = data.aws_ami.amazon_linux.id
   instance_type = var.instance_type
 
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      delete_on_termination = true
+      encrypted             = true
+      volume_size           = var.ec2_root_volume_size
+      volume_type           = "gp3"
+    }
+  }
+
   iam_instance_profile {
-    name = aws_iam_instance_profile.ec2.name
+    name = var.ec2_instance_profile_name
   }
 
   network_interfaces {
@@ -193,11 +200,19 @@ resource "aws_autoscaling_group" "api" {
   max_size            = var.asg_max_size
   min_size            = var.asg_min_size
   target_group_arns   = [aws_lb_target_group.api.arn]
-  vpc_zone_identifier = data.aws_subnets.default.ids
+  vpc_zone_identifier = data.aws_subnets.compute.ids
 
   launch_template {
     id      = aws_launch_template.api.id
-    version = "$Latest"
+    version = aws_launch_template.api.latest_version
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+
+    preferences {
+      min_healthy_percentage = 50
+    }
   }
 
   tag {

@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS Academy 실습 리전"
   type        = string
-  default     = "ap-northeast-2"
+  default     = "us-east-1"
 }
 
 variable "project_name" {
@@ -31,6 +31,18 @@ variable "instance_type" {
   description = "AWS Academy 비용 절감을 위한 EC2 인스턴스 타입"
   type        = string
   default     = "t3.micro"
+}
+
+variable "ec2_instance_profile_name" {
+  description = "AWS Academy에서 제공하는 EC2 Instance Profile 이름"
+  type        = string
+  default     = "LabInstanceProfile"
+}
+
+variable "ec2_root_volume_size" {
+  description = "pnpm install과 API 빌드를 위한 EC2 루트 EBS 볼륨 크기(GB)"
+  type        = number
+  default     = 20
 }
 
 variable "asg_min_size" {

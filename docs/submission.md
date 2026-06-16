@@ -27,7 +27,7 @@
 - `RDS PostgreSQL`: 에러 이벤트와 이슈 저장
 - `S3`: 대시보드 정적 파일 배포
 - `CloudWatch`: 로그와 지표 모니터링
-- `IAM`: EC2 인스턴스 권한 관리
+- `IAM`: AWS Academy가 제공하는 `LabRole` / `LabInstanceProfile`을 EC2 권한으로 사용
 - `Security Group`: 계층별 네트워크 접근 제어
 
 ## 고가용성 설명

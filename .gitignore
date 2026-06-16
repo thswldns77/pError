@@ -10,4 +10,5 @@ apps/api/generated/
 .terraform/
 *.tfstate
 *.tfstate.*
+infra/terraform/terraform.tfvars
 tfplan
