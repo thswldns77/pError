@@ -17,8 +17,13 @@ CORS_ORIGIN="*"
 API_PORT="4000"
 ENV
 
+set -a
+. /opt/perror/.env
+set +a
+
 pnpm install
 pnpm db:generate
+pnpm --filter @perror/api exec prisma migrate deploy
 pnpm --filter @perror/api build
 
 cat > /etc/systemd/system/perror-api.service <<SERVICE
