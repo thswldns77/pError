@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: perror-postgres
+    environment:
+      POSTGRES_DB: perror
+      POSTGRES_USER: perror
+      POSTGRES_PASSWORD: perror_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - perror-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U perror -d perror"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  perror-postgres-data:

@@ -1,0 +1,109 @@
+.login-page {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(40, 126, 116, 0.16), transparent 40%),
+    linear-gradient(45deg, rgba(187, 68, 48, 0.12), transparent 45%), #f6f5ef;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.login-panel {
+  background: #fffdf7;
+  border: 1px solid #d7d0c2;
+  border-radius: 8px;
+  box-shadow: 0 22px 60px rgba(32, 44, 39, 0.16);
+  max-width: 420px;
+  padding: 32px;
+  width: calc(100vw - 48px);
+}
+
+.login-panel h1 {
+  font-size: 42px;
+  margin: 10px 0 28px;
+}
+
+.login-form,
+.service-form {
+  display: grid;
+  gap: 12px;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: #17211f;
+  color: #fffdf7;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 28px 18px;
+}
+
+.sidebar .eyebrow {
+  color: #91b9b1;
+}
+
+.sidebar h1 {
+  font-size: 26px;
+}
+
+.nav-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-tab {
+  background: transparent;
+  color: #d7e1de;
+  justify-content: flex-start;
+}
+
+.nav-tab.active {
+  background: #e9f8a7;
+  color: #17211f;
+}
+
+.content-area {
+  padding: 28px;
+}
+
+.topbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.topbar h2 {
+  font-size: 26px;
+}
+
+.metric-grid,
+.split-layout,
+.issue-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.split-layout {
+  grid-template-columns: 360px minmax(0, 1fr);
+}
+
+.issue-layout {
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+}
+
+.panel-stack {
+  display: grid;
+  gap: 16px;
+}

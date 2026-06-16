@@ -1,0 +1,27 @@
+@media (max-width: 900px) {
+  .app-shell,
+  .split-layout,
+  .issue-layout,
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .content-area {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 16px;
+  }
+
+  .login-panel {
+    padding: 28px 24px;
+    width: calc(100vw - 80px);
+  }
+}

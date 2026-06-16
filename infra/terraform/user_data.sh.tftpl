@@ -1,0 +1,42 @@
+#!/bin/bash
+set -euxo pipefail
+
+dnf update -y
+dnf install -y git nodejs npm
+npm install -g pnpm@10.12.4
+
+cd /opt
+git clone "${github_repo_url}" perror
+cd /opt/perror
+
+cat > .env <<ENV
+DATABASE_URL="${database_url}"
+ADMIN_PASSWORD="${admin_password}"
+AUTH_SECRET="${auth_secret}"
+CORS_ORIGIN="*"
+API_PORT="4000"
+ENV
+
+pnpm install
+pnpm db:generate
+pnpm --filter @perror/api build
+
+cat > /etc/systemd/system/perror-api.service <<SERVICE
+[Unit]
+Description=pError API
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/perror/apps/api
+EnvironmentFile=/opt/perror/.env
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+systemctl daemon-reload
+systemctl enable perror-api
+systemctl start perror-api

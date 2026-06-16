@@ -1,0 +1,10 @@
+aws_region      = "ap-northeast-2"
+project_name    = "perror"
+github_repo_url = "https://github.com/YOUR_NAME/perror.git"
+admin_password  = "replace-with-admin-password"
+auth_secret     = "replace-with-long-random-secret"
+
+instance_type        = "t3.micro"
+asg_min_size         = 2
+asg_desired_capacity = 2
+asg_max_size         = 4

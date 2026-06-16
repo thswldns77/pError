@@ -1,0 +1,23 @@
+{
+  "name": "@perror/sample-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @perror/sdk-express build && tsc -p tsconfig.build.json",
+    "dev": "pnpm --filter @perror/sdk-express build && tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "typecheck": "pnpm --filter @perror/sdk-express build && tsc --noEmit"
+  },
+  "dependencies": {
+    "@perror/sdk-express": "workspace:*",
+    "express": "^5.1.0",
+    "pino": "^10.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.1",
+    "tsx": "^4.20.6"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+coverage/
+apps/api/generated/
+*.tsbuildinfo
+.qa/
+.terraform/
+*.tfstate
+*.tfstate.*
+tfplan

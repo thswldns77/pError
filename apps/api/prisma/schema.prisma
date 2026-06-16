@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum IssueStatus {
+  OPEN
+  RESOLVED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Service {
+  id          String       @id @default(cuid())
+  name        String
+  environment String       @default("production")
+  createdAt   DateTime     @default(now())
+  apiKeys     ApiKey[]
+  issues      Issue[]
+  events      ErrorEvent[]
+
+  @@map("services")
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  serviceId String
+  name      String
+  prefix    String
+  keyHash   String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+  @@map("api_keys")
+}
+
+model Issue {
+  id             String       @id @default(cuid())
+  serviceId      String
+  fingerprint    String
+  message        String
+  stackFirstLine String
+  path           String
+  status         IssueStatus  @default(OPEN)
+  occurrences    Int          @default(1)
+  firstSeenAt    DateTime     @default(now())
+  lastSeenAt     DateTime     @default(now())
+  resolvedAt     DateTime?
+  service        Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  events         ErrorEvent[]
+
+  @@unique([serviceId, fingerprint])
+  @@index([status, lastSeenAt])
+  @@index([serviceId, lastSeenAt])
+  @@map("issues")
+}
+
+model ErrorEvent {
+  id          String   @id @default(cuid())
+  serviceId   String
+  issueId     String
+  message     String
+  stack       String?
+  method      String
+  path        String
+  statusCode  Int
+  environment String
+  release     String?
+  hostname    String?
+  requestId   String?
+  createdAt   DateTime @default(now())
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, createdAt])
+  @@index([issueId, createdAt])
+  @@map("error_events")
+}

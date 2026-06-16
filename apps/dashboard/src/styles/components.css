@@ -1,0 +1,153 @@
+.brand-lock {
+  align-items: center;
+  background: #17211f;
+  border-radius: 8px;
+  color: #e9f8a7;
+  display: inline-flex;
+  height: 52px;
+  justify-content: center;
+  width: 52px;
+}
+
+.icon-button.subtle,
+.table-button {
+  background: #edf0e6;
+  color: #17211f;
+}
+
+.metric-panel,
+.data-panel {
+  background: #fffdf7;
+  border: 1px solid #d9d2c4;
+  border-radius: 8px;
+}
+
+.metric-panel {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+
+.metric-panel svg {
+  color: #bb4430;
+}
+
+.metric-panel span {
+  color: #66736d;
+  font-weight: 700;
+}
+
+.metric-panel strong {
+  font-size: 34px;
+}
+
+.data-panel {
+  padding: 18px;
+}
+
+.section-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  min-width: 680px;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e6dfd0;
+  padding: 12px 10px;
+  text-align: left;
+}
+
+th {
+  color: #66736d;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.badge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.badge.open {
+  background: #ffe2d7;
+  color: #9b2f1d;
+}
+
+.badge.resolved {
+  background: #e6f4d8;
+  color: #2d6d3a;
+}
+
+.key-box,
+.snippet-row {
+  align-items: center;
+  background: #17211f;
+  border-radius: 6px;
+  color: #e9f8a7;
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  overflow-x: auto;
+  padding: 12px;
+}
+
+.detail-list {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.detail-list div {
+  border-bottom: 1px solid #e6dfd0;
+  padding-bottom: 8px;
+}
+
+dt {
+  color: #66736d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+dd {
+  margin: 4px 0 0;
+}
+
+.event-list {
+  display: grid;
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.event-row {
+  background: #f7f2e8;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.code-block {
+  background: #17211f;
+  border-radius: 6px;
+  color: #fffdf7;
+  margin: 14px 0 0;
+  padding: 16px;
+}
+
+.empty-state {
+  color: #66736d;
+}
