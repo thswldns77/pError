@@ -26,6 +26,10 @@ export function Services(props: ServicesProps) {
         <div className="section-heading">
           <h3>서비스 등록</h3>
         </div>
+        <p className="muted-copy">
+          실제 서버를 새로 만드는 기능이 아니라, 모니터링할 서버를 등록하고 에러 전송용 Service API Key를
+          발급합니다.
+        </p>
         <label htmlFor="service-name">서비스 이름</label>
         <input id="service-name" name="name" placeholder="sample-api" />
         <label htmlFor="service-env">환경</label>
