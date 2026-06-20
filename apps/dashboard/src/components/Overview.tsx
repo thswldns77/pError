@@ -27,7 +27,7 @@ export function Overview(props: OverviewProps) {
         </article>
         <article className="metric-panel">
           <Server aria-hidden="true" size={22} />
-          <span>처리 인스턴스</span>
+          <span>최근 응답 인스턴스</span>
           <strong className="instance-value">{summary?.instanceId ?? "대기 중"}</strong>
         </article>
       </div>
