@@ -1,6 +1,7 @@
 import { Router } from "express"
+import type { AppConfig } from "../config/env.js"
 
-export function healthRouter(): Router {
+export function healthRouter(config: AppConfig): Router {
   const router = Router()
 
   router.get("/health", (_request, response) => {
@@ -8,6 +9,7 @@ export function healthRouter(): Router {
       ok: true,
       service: "pError API",
       checkedAt: new Date().toISOString(),
+      instanceId: config.INSTANCE_ID,
     })
   })
 

@@ -107,7 +107,13 @@ export function adminRouter(config: AppConfig, prisma: PrismaClient): Router {
           orderBy: { createdAt: "desc" },
         }),
       ])
-      response.json({ openIssues, recentEvents, services, totalEvents })
+      response.json({
+        instanceId: config.INSTANCE_ID,
+        openIssues,
+        recentEvents,
+        services,
+        totalEvents,
+      })
     }),
   )
 

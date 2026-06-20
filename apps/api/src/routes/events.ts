@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client"
 import { IssueStatus } from "@prisma/client"
 import { Router } from "express"
 import { z } from "zod"
+import type { AppConfig } from "../config/env.js"
 import { AppError } from "../errors/app-error.js"
 import { asyncHandler } from "../http/async-handler.js"
 import { createIssueFingerprint, stackFirstLine } from "../services/fingerprint.js"
@@ -26,7 +27,7 @@ function readApiKey(headerValue: string | readonly string[] | undefined): string
   throw new AppError(401, "MISSING_SERVICE_KEY", "서비스 API Key가 필요합니다.")
 }
 
-export function eventsRouter(prisma: PrismaClient): Router {
+export function eventsRouter(config: AppConfig, prisma: PrismaClient): Router {
   const router = Router()
 
   router.post(
@@ -97,6 +98,7 @@ export function eventsRouter(prisma: PrismaClient): Router {
 
       response.status(202).json({
         eventId: event.id,
+        instanceId: config.INSTANCE_ID,
         issueId: issue.id,
         status: issue.status,
       })

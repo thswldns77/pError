@@ -1,4 +1,4 @@
-import { AlertTriangle, RadioTower, Server } from "lucide-react"
+import { Activity, AlertTriangle, RadioTower, Server } from "lucide-react"
 import type { DashboardSummary } from "../api/types"
 
 type OverviewProps = {
@@ -21,9 +21,14 @@ export function Overview(props: OverviewProps) {
           <strong>{summary?.recentEvents ?? 0}</strong>
         </article>
         <article className="metric-panel">
-          <Server aria-hidden="true" size={22} />
+          <Activity aria-hidden="true" size={22} />
           <span>누적 이벤트</span>
           <strong>{summary?.totalEvents ?? 0}</strong>
+        </article>
+        <article className="metric-panel">
+          <Server aria-hidden="true" size={22} />
+          <span>처리 인스턴스</span>
+          <strong className="instance-value">{summary?.instanceId ?? "대기 중"}</strong>
         </article>
       </div>
 

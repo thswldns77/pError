@@ -9,17 +9,25 @@ cd /opt
 git clone "${github_repo_url}" perror
 cd /opt/perror
 
+INSTANCE_ID="$(hostname)"
+if TOKEN="$(curl -fsS -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" 2>/dev/null)"; then
+  INSTANCE_ID="$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" "http://169.254.169.254/latest/meta-data/instance-id" 2>/dev/null || hostname)"
+fi
+
+set +x
 cat > .env <<ENV
 DATABASE_URL="${database_url}"
 ADMIN_PASSWORD="${admin_password}"
 AUTH_SECRET="${auth_secret}"
 CORS_ORIGIN="*"
 API_PORT="4000"
+INSTANCE_ID="$INSTANCE_ID"
 ENV
 
 set -a
 . /opt/perror/.env
 set +a
+set -x
 
 pnpm install
 pnpm db:generate

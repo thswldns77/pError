@@ -12,9 +12,9 @@ export function createApp(config: AppConfig, prisma: PrismaClient): express.Expr
 
   app.use(cors({ origin: config.CORS_ORIGIN }))
   app.use(express.json({ limit: "256kb" }))
-  app.use(healthRouter())
+  app.use(healthRouter(config))
   app.use(adminRouter(config, prisma))
-  app.use(eventsRouter(prisma))
+  app.use(eventsRouter(config, prisma))
   app.use(errorMiddleware)
 
   return app

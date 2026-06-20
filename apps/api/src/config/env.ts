@@ -6,6 +6,7 @@ const EnvSchema = z.object({
   AUTH_SECRET: z.string().min(16),
   CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
   DATABASE_URL: z.string().min(1),
+  INSTANCE_ID: z.string().min(1).default("local-dev"),
 })
 
 export type AppConfig = z.infer<typeof EnvSchema>

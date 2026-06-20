@@ -46,6 +46,7 @@ export type IssueDetail = IssueListItem & {
 }
 
 export type DashboardSummary = {
+  readonly instanceId: string
   readonly openIssues: number
   readonly recentEvents: number
   readonly services: readonly ServiceSummary[]
