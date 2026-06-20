@@ -1,4 +1,4 @@
-import ky from "ky"
+import ky, { HTTPError } from "ky"
 import type { CreatedService, DashboardSummary, IssueDetail, IssueListItem } from "./types"
 
 const { VITE_API_BASE_URL } = import.meta.env
@@ -11,6 +11,10 @@ const api = ky.create({
 
 function authHeaders(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` }
+}
+
+export function isUnauthorizedError(error: unknown): boolean {
+  return error instanceof HTTPError && error.response.status === 401
 }
 
 export async function login(password: string): Promise<string> {

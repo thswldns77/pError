@@ -4,6 +4,7 @@ import {
   fetchIssue,
   fetchIssues,
   fetchSummary,
+  isUnauthorizedError,
   login,
   resolveIssue,
 } from "./api/client"
@@ -22,8 +23,22 @@ function messageFrom(error: unknown): string {
   return "요청을 처리하지 못했습니다."
 }
 
+const AUTH_TOKEN_STORAGE_KEY = "perror-admin-token"
+
+function storedToken(): string | null {
+  return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+}
+
+function saveToken(token: string): void {
+  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+}
+
+function clearToken(): void {
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+}
+
 export function App() {
-  const [token, setToken] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(() => storedToken())
   const [activeTab, setActiveTab] = useState<TabKey>("overview")
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [issues, setIssues] = useState<readonly IssueListItem[]>([])
@@ -35,9 +50,23 @@ export function App() {
     if (token === null) {
       return
     }
-    const [nextSummary, nextIssues] = await Promise.all([fetchSummary(token), fetchIssues(token)])
-    setSummary(nextSummary)
-    setIssues(nextIssues)
+    try {
+      const [nextSummary, nextIssues] = await Promise.all([fetchSummary(token), fetchIssues(token)])
+      setSummary(nextSummary)
+      setIssues(nextIssues)
+      setErrorMessage(null)
+    } catch (error) {
+      if (!isUnauthorizedError(error)) {
+        throw error
+      }
+      clearToken()
+      setToken(null)
+      setSummary(null)
+      setIssues([])
+      setIssueDetail(null)
+      setCreatedService(null)
+      setErrorMessage("로그인이 만료되었습니다. 다시 로그인하세요.")
+    }
   }, [token])
 
   useEffect(() => {
@@ -47,6 +76,7 @@ export function App() {
   async function handleLogin(password: string): Promise<void> {
     try {
       const nextToken = await login(password)
+      saveToken(nextToken)
       setToken(nextToken)
       setErrorMessage(null)
     } catch (error) {
