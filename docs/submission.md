@@ -223,7 +223,7 @@ S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 
 - k6 부하 테스트 스크립트
 - S3 HTML 이벤트 전송 테스트 사이트
 - Terraform 인프라 코드
-- 한국어 README와 제출 문서
+- README와 제출 문서
 
 ## 12. AI 도구 및 오픈소스 사용
 
