@@ -9,7 +9,7 @@
 - 임시 시연 URL:
   - 대시보드: `http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com`
   - API Health: `http://perror-alb-843534256.us-east-1.elb.amazonaws.com/health`
-  - Load Panel: `http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com/load-test.html`
+  - 이벤트 전송 테스트 사이트: `http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com/load-test.html`
 
 `pError`는 Sentry와 유사한 개인용 서버 에러 모니터링 서비스입니다. Express 같은 백엔드 서버에서 발생한 500 계열 에러를 수집하고, 같은 원인의 에러를 이슈 단위로 그룹화해 대시보드에서 확인할 수 있도록 만들었습니다.
 
@@ -33,7 +33,7 @@
 - 용도별 연동 안내 화면
 - 샘플 Express 서버
 - k6 부하 테스트 스크립트
-- S3에서 실행 가능한 HTML 부하 테스트 패널
+- S3에서 실행 가능한 HTML 이벤트 전송 테스트 사이트
 - Terraform 기반 AWS 인프라 코드
 
 ## 4. 과제 요구사항 대응
@@ -41,7 +41,7 @@
 | 과제 요소 | pError에서의 구현 |
 | --- | --- |
 | AWS 기반 웹 서비스 | 개인 서버 에러 모니터링 API와 대시보드 구현 |
-| S3 | React 대시보드와 HTML 부하 테스트 패널 정적 호스팅 |
+| S3 | React 대시보드와 HTML 이벤트 전송 테스트 사이트 정적 호스팅 |
 | EC2 | pError API 서버 실행 |
 | Terraform IaC | `infra/terraform`에서 ALB, EC2 ASG, RDS, S3 등을 코드로 정의 |
 | ALB | 외부 요청을 API 서버 인스턴스로 분산 |
@@ -49,7 +49,7 @@
 | 고가용성 | ALB Health Check와 ASG 복구를 통해 단일 EC2 장애에 대응 |
 | RDS | PostgreSQL에 서비스, API Key, 이슈, 이벤트 저장 |
 | 모니터링 | 대시보드에서 열린 이슈, 누적 이벤트, 서비스별 수집 현황 확인 |
-| 벤치마킹/부하 테스트 | k6 및 S3 Load Panel로 이벤트 요청 부하 생성 |
+| 벤치마킹/부하 테스트 | k6로 이벤트 요청 부하를 생성하고, S3 이벤트 전송 테스트 사이트로 수집 흐름 시연 |
 | 문서화 | README, AWS 아키텍처 문서, 테스트 리포트 작성 |
 
 ## 5. AWS 아키텍처
@@ -67,18 +67,18 @@
   -> EC2 Auto Scaling Group
   -> RDS PostgreSQL
 
-S3 Load Panel
+S3 이벤트 전송 테스트 사이트
   -> 테스트용 에러 이벤트 전송
   -> ALB
   -> EC2 Auto Scaling Group
   -> RDS PostgreSQL
 ```
 
-S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결과를 확인하는 대시보드와 테스트용 Load Panel 역할을 합니다. 실제 수집은 ALB 뒤의 EC2 pError API 서버가 담당합니다.
+S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결과를 확인하는 대시보드와 이벤트 전송 테스트 사이트 역할을 합니다. 실제 수집은 ALB 뒤의 EC2 pError API 서버가 담당합니다.
 
 ### 사용한 AWS 서비스
 
-- `S3`: React 대시보드와 부하 테스트 HTML 페이지 배포
+- `S3`: React 대시보드와 이벤트 전송 테스트 HTML 페이지 배포
 - `EC2`: pError API 서버 실행
 - `ALB`: API 서버 앞단의 로드 밸런서
 - `Auto Scaling Group`: API 서버 인스턴스 수 유지 및 자동 확장
@@ -164,7 +164,7 @@ curl -i http://localhost:4100/error/async
 BASE_URL=http://localhost:4000 PERROR_API_KEY=perror_xxxxx k6 run tests/load/events.js
 ```
 
-### S3 Load Panel 테스트
+### S3 이벤트 전송 테스트
 
 S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 ALB 주소가 자동으로 입력됩니다. 이후 다음 순서로 테스트합니다.
 
@@ -201,7 +201,7 @@ S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 
 - 이슈 그룹화 동작 확인
 - k6 부하 테스트 통과
 - AWS Academy 환경에서 ALB, EC2 ASG, RDS, S3 배포 확인
-- S3 HTML Load Panel을 통한 이벤트 수집 확인
+- S3 HTML 이벤트 전송 테스트 사이트를 통한 이벤트 수집 확인
 
 ## 12. 직접 구현한 부분
 
@@ -216,7 +216,7 @@ S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 
 - 용도별 SDK/HTTP 연동 안내 화면
 - 샘플 Express 서버
 - k6 부하 테스트 스크립트
-- S3 HTML Load Panel
+- S3 HTML 이벤트 전송 테스트 사이트
 - Terraform 인프라 코드
 - 한국어 README와 제출 문서
 

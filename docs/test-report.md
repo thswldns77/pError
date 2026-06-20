@@ -107,7 +107,7 @@ BASE_URL=http://localhost:4000 PERROR_API_KEY=perror_xxxxx k6 run tests/load/eve
 | AWS demo Target Group | 통과 | `4100` 포트 데모 서버 Target 2개 healthy |
 | AWS demo error ingestion | 통과 | `aws-demo` 서비스 2개에서 이벤트/이슈 수집 |
 | AWS ASG instance refresh | 통과 | 최신 Launch Template v5로 교체 완료 |
-| HTML Load Panel | 통과 | 브라우저에서 서비스 생성 후 이벤트 요청 10/10 성공 |
+| HTML 이벤트 전송 테스트 사이트 | 통과 | 브라우저에서 서비스 생성 후 이벤트 요청 10/10 성공 |
 
 ## 실행된 검증 요약
 
@@ -309,9 +309,9 @@ Auto Scaling Group:
 
 이 검증으로 실제 AWS ALB 뒤의 EC2 서버 2대가 각각 pError에 서비스로 등록되고, 서버에서 발생한 `500` 에러가 RDS에 이벤트/이슈로 저장되는 것을 확인했습니다.
 
-### HTML Load Panel 검증
+### HTML 이벤트 전송 테스트 사이트 검증
 
-S3에 함께 배포할 수 있는 정적 HTML 부하 테스트 패널을 추가했습니다. 패널은 `?api=` query string으로 ALB API 주소를 받고, 관리자 비밀번호로 테스트용 서비스를 생성한 뒤 `/api/events`에 에러 이벤트를 전송합니다.
+S3에 함께 배포할 수 있는 정적 HTML 이벤트 전송 테스트 사이트를 추가했습니다. 이 사이트는 `?api=` query string으로 ALB API 주소를 받고, 관리자 비밀번호로 테스트용 서비스를 생성한 뒤 `/api/events`에 에러 이벤트를 전송합니다.
 
 검증 URL:
 
@@ -358,4 +358,4 @@ RDS Endpoint: perror-postgres.cqlq8uyqke73.us-east-1.rds.amazonaws.com
 | Lint | 통과 |
 | SDK 안내 화면 데스크톱/모바일 시각 확인 | 통과 |
 
-SDK 안내 화면에는 `운영 서버 자동 수집`, `프레임워크 무관 수집`, `S3 Load Panel 테스트` 용도를 분리해 표시했습니다. 이로써 pError가 정적 웹사이트 프론트 에러 수집기가 아니라, 백엔드 서버가 보낸 에러 이벤트를 ALB 뒤의 EC2 API 서버에서 수집해 RDS에 저장하는 구조임을 확인할 수 있습니다.
+SDK 안내 화면에는 `운영 서버 자동 수집`, `프레임워크 무관 수집`, `S3 이벤트 전송 테스트` 용도를 분리해 표시했습니다. 이로써 pError가 정적 웹사이트 프론트 에러 수집기가 아니라, 백엔드 서버가 보낸 에러 이벤트를 ALB 뒤의 EC2 API 서버에서 수집해 RDS에 저장하는 구조임을 확인할 수 있습니다.

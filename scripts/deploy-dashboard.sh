@@ -65,4 +65,4 @@ NODE
 aws s3 sync "$DIST_DIR" "s3://$DASHBOARD_BUCKET" --delete --region "$REGION"
 
 echo "Dashboard: http://$DASHBOARD_BUCKET.s3-website-$REGION.amazonaws.com"
-echo "Load Panel: http://$DASHBOARD_BUCKET.s3-website-$REGION.amazonaws.com/load-test.html"
+echo "Event Test Site: http://$DASHBOARD_BUCKET.s3-website-$REGION.amazonaws.com/load-test.html"

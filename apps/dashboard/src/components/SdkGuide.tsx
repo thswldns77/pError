@@ -41,8 +41,8 @@ export function SdkGuide() {
           <TerminalSquare aria-hidden="true" size={20} />
         </div>
         <p className="muted-copy">
-          pError API는 HTTP 이벤트 수집 서버입니다. Express SDK는 자동 수집용 도구이고, Load Panel은
-          시연과 부하 테스트용 도구입니다.
+          pError API는 HTTP 이벤트 수집 서버입니다. Express SDK는 자동 수집용 도구이고, 이벤트 전송
+          테스트 사이트는 수집 흐름 시연용 도구입니다.
         </p>
         <div className="snippet-row">
           <Globe2 aria-hidden="true" size={18} />
@@ -81,8 +81,8 @@ export function SdkGuide() {
           <header>
             <Activity aria-hidden="true" size={20} />
             <div>
-              <h3>S3 Load Panel 테스트</h3>
-              <p>브라우저에서 테스트 서비스를 만들고 ALB API로 에러 이벤트 부하를 보냅니다.</p>
+              <h3>S3 이벤트 전송 테스트</h3>
+              <p>브라우저에서 테스트 서비스를 만들고 ALB API로 4xx/5xx 에러 이벤트를 보냅니다.</p>
             </div>
           </header>
           <pre className="code-block">/load-test.html</pre>
