@@ -53,7 +53,7 @@ flowchart LR
 
   s3["S3 정적 웹사이트<br/>React 대시보드"]
   alb["ALB<br/>80번 포트"]
-  asg["EC2 Auto Scaling Group<br/>pError API 2대 이상"]
+  asg["EC2 Auto Scaling Group<br/>pError API 서버 2개 이상"]
   rds["RDS PostgreSQL<br/>이벤트 / 이슈 저장"]
 
   backend -->|/api/events| alb

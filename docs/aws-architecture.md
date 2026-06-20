@@ -18,7 +18,7 @@ flowchart TB
   end
 
   subgraph app["Application Layer"]
-    asg["EC2 Auto Scaling Group<br/>pError API 최소 2대"]
+    asg["EC2 Auto Scaling Group<br/>pError API 서버 2개 이상"]
     api1["API Instance A"]
     api2["API Instance B"]
   end
