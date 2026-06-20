@@ -45,24 +45,23 @@ AWS Academy 실습 리소스는 비용 방지를 위해 검증 후 삭제할 수
 
 ## 5. AWS 아키텍처
 
-```text
-모니터링 대상 백엔드 서버
-  -> Express SDK 또는 HTTP POST /api/events
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
+```mermaid
+flowchart LR
+  backend["모니터링 대상 백엔드 서버<br/>Express SDK / HTTP API"]
+  admin["관리자 사용자"]
+  tester["S3 이벤트 전송 테스트 사이트"]
 
-관리자 사용자
-  -> S3 Static Website Dashboard
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
+  s3["S3 정적 웹사이트<br/>React 대시보드"]
+  alb["ALB<br/>80번 포트"]
+  asg["EC2 Auto Scaling Group<br/>pError API 2대 이상"]
+  rds["RDS PostgreSQL<br/>이벤트 / 이슈 저장"]
 
-S3 이벤트 전송 테스트 사이트
-  -> 테스트용 에러 이벤트 전송
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
+  backend -->|/api/events| alb
+  tester -->|테스트 이벤트 전송| alb
+  admin -->|대시보드 접속| s3
+  s3 -->|관리자 API 조회| alb
+  alb --> asg
+  asg --> rds
 ```
 
 S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결과를 확인하는 대시보드와 이벤트 전송 테스트 사이트 역할을 합니다. 실제 수집은 ALB 뒤의 EC2 pError API 서버가 담당합니다.

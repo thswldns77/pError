@@ -4,22 +4,55 @@
 
 `pError`는 서버 에러 이벤트를 수집하는 API 서버가 장애나 트래픽 증가에도 계속 동작해야 하는 서비스입니다. 모니터링 시스템이 멈추면 실제 서비스 장애를 추적할 수 없기 때문에, 과제용 AWS 구조에서는 API 수집 계층을 고가용성으로 구성합니다.
 
-```text
-샘플/개인 백엔드 서버
-  -> pError SDK
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
-  -> React Dashboard on S3
+```mermaid
+flowchart TB
+  subgraph clients["사용자 / 연동 대상"]
+    backend["모니터링 대상 백엔드 서버<br/>Express SDK 또는 HTTP POST"]
+    admin["관리자 사용자"]
+    tester["이벤트 전송 테스트 사이트"]
+  end
 
-S3 이벤트 전송 테스트 사이트
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
-  -> React Dashboard on S3
+  subgraph public["Public Layer"]
+    s3["S3 Static Website<br/>React Dashboard / load-test.html"]
+    alb["Application Load Balancer<br/>HTTP 80"]
+  end
+
+  subgraph app["Application Layer"]
+    asg["EC2 Auto Scaling Group<br/>pError API 최소 2대"]
+    api1["API Instance A"]
+    api2["API Instance B"]
+  end
+
+  subgraph data["Data Layer"]
+    rds["RDS PostgreSQL<br/>services / api_keys / issues / events"]
+  end
+
+  backend -->|/api/events| alb
+  tester -->|4xx/5xx 테스트 이벤트| alb
+  admin -->|대시보드 접속| s3
+  s3 -->|관리자 API 호출| alb
+  alb --> asg
+  asg --> api1
+  asg --> api2
+  api1 --> rds
+  api2 --> rds
 ```
 
 S3는 정적 웹사이트 호스팅 계층입니다. 대시보드는 저장된 이슈를 조회하는 화면이고, 이벤트 전송 테스트 사이트는 시연용 이벤트를 발생시키는 테스트 화면입니다. 실제 에러 이벤트 수집과 저장은 ALB 뒤의 EC2 API 서버와 RDS가 담당합니다.
+
+## 보안그룹 흐름
+
+```mermaid
+flowchart LR
+  internet["Internet"]
+  alb_sg["ALB Security Group<br/>Inbound 80"]
+  app_sg["API EC2 Security Group<br/>Inbound 4000 from ALB"]
+  db_sg["RDS Security Group<br/>Inbound 5432 from API"]
+
+  internet --> alb_sg
+  alb_sg --> app_sg
+  app_sg --> db_sg
+```
 
 ## 서비스별 역할
 
