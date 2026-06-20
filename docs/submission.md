@@ -83,7 +83,6 @@ S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결
 - `ALB`: API 서버 앞단의 로드 밸런서
 - `Auto Scaling Group`: API 서버 인스턴스 수 유지 및 자동 확장
 - `RDS PostgreSQL`: 에러 이벤트와 이슈 데이터 저장
-- `CloudWatch`: 로그와 지표 확인
 - `Security Group`: ALB, API, DB 계층별 접근 제어
 - `IAM`: AWS Academy에서 제공하는 실습용 Instance Profile 사용
 

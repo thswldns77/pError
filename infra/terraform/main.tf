@@ -145,11 +145,6 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.db.id]
 }
 
-resource "aws_cloudwatch_log_group" "api" {
-  name              = "/perror/api"
-  retention_in_days = 7
-}
-
 resource "aws_lb" "api" {
   name               = "${var.project_name}-alb"
   load_balancer_type = "application"

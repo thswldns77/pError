@@ -5,7 +5,7 @@
 ## 프로젝트 목표
 
 - 개인 프로젝트에 붙일 수 있는 무료형 서버 에러 모니터링 도구를 만든다.
-- 과제에서는 AWS Academy 기준으로 `ALB + EC2 Auto Scaling Group + RDS + S3 + CloudWatch` 고가용성 구조를 설명한다.
+- 과제에서는 AWS Academy 기준으로 `ALB + EC2 Auto Scaling Group + RDS + S3` 고가용성 구조를 설명한다.
 - 기본 실행은 로컬 개발 환경에서 가능하게 하고, AWS 배포는 Terraform으로 수동 실행한다.
 - 최종 검증에서는 AWS Academy 환경에 실제 `ALB + EC2 ASG + RDS + S3` 구성을 생성해 동작을 확인했다.
 
@@ -38,7 +38,7 @@ docs                 과제 제출 문서
 - `S3 Dashboard`: 수집된 이벤트와 이슈를 확인하는 관리자 화면
 - `S3 Load Panel`: 시연과 부하 테스트를 위해 가짜 서버 에러를 보내는 테스트 화면
 - `EC2 pError API`: 실제 에러 이벤트를 수집하고 RDS에 저장하는 서버
-- `packages/sdk-express`: Express 서버의 500 계열 예외를 자동 전송하는 SDK
+- `packages/sdk-express`: Express 서버의 4xx/5xx 응답과 서버 예외를 자동 전송하는 SDK
 - 다른 프레임워크 서버: 같은 `/api/events` 규격으로 직접 HTTP 전송 가능
 
 ## 로컬 실행
@@ -151,7 +151,6 @@ docker compose down
 - `RDS PostgreSQL`: 서비스, API Key, 이슈, 이벤트 저장
 - `S3`: React 대시보드 정적 파일 배포
 - `S3 Load Panel`: HTML 페이지에서 ALB API로 가벼운 부하/에러 이벤트 전송
-- `CloudWatch`: EC2/API 로그 및 지표 확인
 - `Security Group`: ALB, API, DB 접근 경계 분리
 - `IAM`: AWS Academy 제공 `LabInstanceProfile`로 EC2 권한 연결
 
