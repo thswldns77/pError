@@ -49,7 +49,7 @@ AWS Academy 실습 리소스는 비용 방지를 위해 검증 후 삭제할 수
 flowchart LR
   backend["모니터링 대상 백엔드 서버<br/>Express SDK / HTTP API"]
   admin["관리자 사용자"]
-  tester["S3 이벤트 전송 테스트 사이트"]
+  tester["S3 이벤트 전송 테스트 사이트<br/>백엔드 서버 이벤트 흉내"]
 
   s3["S3 정적 웹사이트<br/>React 대시보드"]
   alb["ALB<br/>80번 포트"]
@@ -57,14 +57,14 @@ flowchart LR
   rds["RDS PostgreSQL<br/>이벤트 / 이슈 저장"]
 
   backend -->|/api/events| alb
-  tester -->|테스트 이벤트 전송| alb
+  tester -->|/api/events 테스트 이벤트| alb
   admin -->|대시보드 접속| s3
   s3 -->|관리자 API 조회| alb
   alb --> asg
   asg --> rds
 ```
 
-S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결과를 확인하는 대시보드와 이벤트 전송 테스트 사이트 역할을 합니다. 실제 수집은 ALB 뒤의 EC2 pError API 서버가 담당합니다.
+S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결과를 확인하는 대시보드와 이벤트 전송 테스트 사이트 역할을 합니다. 이벤트 전송 테스트 사이트는 별도 백엔드 서버로 요청을 보내는 것이 아니라, 모니터링 대상 백엔드 서버가 보낼 `/api/events` 요청을 흉내 내어 ALB 뒤의 pError API 서버로 직접 전송합니다.
 
 ### 사용한 AWS 서비스
 

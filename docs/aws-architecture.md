@@ -9,7 +9,7 @@ flowchart TB
   subgraph clients["사용자 / 연동 대상"]
     backend["모니터링 대상 백엔드 서버<br/>Express SDK 또는 HTTP POST"]
     admin["관리자 사용자"]
-    tester["이벤트 전송 테스트 사이트"]
+    tester["이벤트 전송 테스트 사이트<br/>백엔드 서버 이벤트 흉내"]
   end
 
   subgraph public["Public Layer"]
@@ -28,7 +28,7 @@ flowchart TB
   end
 
   backend -->|/api/events| alb
-  tester -->|4xx/5xx 테스트 이벤트| alb
+  tester -->|/api/events 테스트 이벤트| alb
   admin -->|대시보드 접속| s3
   s3 -->|관리자 API 호출| alb
   alb --> asg
@@ -38,7 +38,7 @@ flowchart TB
   api2 --> rds
 ```
 
-S3는 정적 웹사이트 호스팅 계층입니다. 대시보드는 저장된 이슈를 조회하는 화면이고, 이벤트 전송 테스트 사이트는 시연용 이벤트를 발생시키는 테스트 화면입니다. 실제 에러 이벤트 수집과 저장은 ALB 뒤의 EC2 API 서버와 RDS가 담당합니다.
+S3는 정적 웹사이트 호스팅 계층입니다. 대시보드는 저장된 이슈를 조회하는 화면이고, 이벤트 전송 테스트 사이트는 시연용 이벤트를 발생시키는 테스트 화면입니다. 이 테스트 사이트는 모니터링 대상 백엔드 서버를 거치지 않고, 백엔드 서버가 보낼 에러 이벤트 요청을 흉내 내어 ALB 뒤의 EC2 API 서버로 직접 전송합니다. 실제 에러 이벤트 수집과 저장은 EC2 API 서버와 RDS가 담당합니다.
 
 ## 보안그룹 흐름
 
