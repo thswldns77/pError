@@ -6,35 +6,26 @@
 - 주제: AWS 기반 고가용성 개인 서버 에러 모니터링 웹 서비스
 - GitHub 저장소: https://github.com/thswldns77/pError
 - 제출 범위: 소스 코드, Terraform IaC, 실행 문서, 테스트 문서
-- 임시 시연 URL:
-  - 대시보드: `http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com`
-  - API Health: `http://perror-alb-843534256.us-east-1.elb.amazonaws.com/health`
-  - 이벤트 전송 테스트 사이트: `http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com/load-test.html`
 
 `pError`는 Sentry와 유사한 개인용 서버 에러 모니터링 서비스입니다. Express 같은 백엔드 서버에서 발생한 500 계열 에러를 수집하고, 같은 원인의 에러를 이슈 단위로 그룹화해 대시보드에서 확인할 수 있도록 만들었습니다.
 
-위 시연 URL은 AWS Academy 실습 리소스가 켜져 있는 동안만 사용할 수 있으며, 비용 방지를 위해 검토 후 삭제할 수 있습니다.
+AWS Academy 실습 리소스는 비용 방지를 위해 검증 후 삭제할 수 있도록 Terraform으로 재생성 가능한 구조로 작성했습니다. 실제 접속 주소는 재배포 시 `terraform output` 또는 `scripts/deploy-dashboard.sh` 출력에서 확인합니다.
 
 ## 2. 프로젝트 선정 이유
 
 이번 과제는 S3, EC2, AWS CLI, Terraform, ALB, ASG, RDS, 모니터링, 부하 테스트 등 수업에서 다룬 클라우드 컴퓨팅 개념을 종합해 작은 AWS 기반 웹 서비스를 만드는 것이 목표입니다.
 
-저는 WordPress 확장 대신 새로운 웹 서비스인 `pError`를 구현했습니다. 서버 에러 모니터링은 실제 개인 프로젝트나 백엔드 서비스 운영에서 바로 사용할 수 있는 주제이며, 에러 수집 API가 장애 상황에서도 계속 동작해야 하므로 ALB와 Auto Scaling Group을 이용한 고가용성 구성을 설명하기에 적합하다고 판단했습니다.
+저는 WordPress 확장 대신 새로운 웹 서비스인 `pError`를 구현했습니다. Sentry 같은 상용 에러 모니터링 서비스는 편리하지만 무료로 사용하기에는 이벤트 수집량과 사용 범위에 제한이 있기 때문에, 개인 프로젝트에 부담 없이 붙일 수 있는 미니 Sentry 형태의 서버 에러 모니터링 서비스를 만들면 실사용 가능성이 높다고 판단했습니다. 또한 에러 수집 API는 장애 상황에서도 계속 동작해야 하므로 ALB와 Auto Scaling Group을 이용한 고가용성 구성을 설명하기에 적합합니다.
 
 ## 3. 주요 기능
 
-- 서버 에러 이벤트 수집 API
-- 서비스별 API Key 발급 및 인증
-- 공통 HTTP 이벤트 수집 규격
-- 같은 에러를 이슈로 그룹화
-- 이슈 발생 횟수, 최근 발생 시간, 상태 관리
-- React 기반 관리자 대시보드
-- Express 서버용 pError SDK
-- 용도별 연동 안내 화면
-- 샘플 Express 서버
-- k6 부하 테스트 스크립트
-- S3에서 실행 가능한 HTML 이벤트 전송 테스트 사이트
-- Terraform 기반 AWS 인프라 코드
+- 서버 에러 이벤트 수집 및 RDS 저장
+- Service API Key 기반 이벤트 인증
+- 같은 원인의 에러를 이슈로 그룹화
+- React 관리자 대시보드를 통한 이슈/이벤트 조회
+- Express SDK 및 공통 HTTP API 연동 지원
+- S3 이벤트 전송 테스트 사이트와 k6 부하 테스트
+- Terraform 기반 AWS 고가용성 인프라 구성
 
 ## 4. 과제 요구사항 대응
 
@@ -54,27 +45,26 @@
 
 ## 5. AWS 아키텍처
 
-```text
-모니터링 대상 백엔드 서버
-  -> Express SDK 또는 HTTP POST /api/events
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
+```mermaid
+flowchart LR
+  backend["모니터링 대상 백엔드 서버<br/>Express SDK / HTTP API"]
+  admin["관리자 사용자"]
+  tester["S3 이벤트 전송 테스트 사이트<br/>백엔드 서버 이벤트 흉내"]
 
-관리자 사용자
-  -> S3 Static Website Dashboard
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
+  s3["S3 정적 웹사이트<br/>React 대시보드"]
+  alb["ALB<br/>80번 포트"]
+  asg["EC2 Auto Scaling Group<br/>pError API 서버 2개 이상"]
+  rds["RDS PostgreSQL<br/>이벤트 / 이슈 저장"]
 
-S3 이벤트 전송 테스트 사이트
-  -> 테스트용 에러 이벤트 전송
-  -> ALB
-  -> EC2 Auto Scaling Group
-  -> RDS PostgreSQL
+  backend -->|/api/events| alb
+  tester -->|/api/events 테스트 이벤트| alb
+  admin -->|대시보드 접속| s3
+  s3 -->|관리자 API 조회| alb
+  alb --> asg
+  asg --> rds
 ```
 
-S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결과를 확인하는 대시보드와 이벤트 전송 테스트 사이트 역할을 합니다. 실제 수집은 ALB 뒤의 EC2 pError API 서버가 담당합니다.
+S3 정적 웹사이트는 에러를 수집하는 서버가 아니라, 수집 결과를 확인하는 대시보드와 이벤트 전송 테스트 사이트 역할을 합니다. 이벤트 전송 테스트 사이트는 별도 백엔드 서버로 요청을 보내는 것이 아니라, 모니터링 대상 백엔드 서버가 보낼 `/api/events` 요청을 흉내 내어 ALB 뒤의 pError API 서버로 직접 전송합니다.
 
 ### 사용한 AWS 서비스
 
@@ -98,49 +88,70 @@ tests/load           k6 부하 테스트 스크립트
 docs                 제출 문서, 아키텍처 문서, 테스트 리포트
 ```
 
-## 7. 로컬 실행 방법
+## 7. AWS 배포 방법
+
+AWS Academy 환경에서 다음 순서로 배포합니다.
+
+### 7.1 Terraform 변수 준비
 
 ```bash
-pnpm install
-cp .env.example .env
-docker compose up -d
-pnpm db:generate
-pnpm db:migrate
-pnpm dev:api
-pnpm dev:dashboard
+cp infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars
 ```
 
-대시보드 접속 주소는 다음과 같습니다.
+`infra/terraform/terraform.tfvars`에서 아래 값을 설정합니다.
 
-```text
-http://localhost:5173
+```hcl
+aws_region      = "us-east-1"
+github_repo_url = "https://github.com/<github-id>/pError.git"
+admin_password  = "<dashboard-admin-password>"
+auth_secret     = "<long-random-secret>"
 ```
 
-## 8. AWS 배포 방법
+AWS Academy에서는 EC2 인스턴스 프로파일을 새로 만들 권한이 제한될 수 있으므로, Terraform은 기본값으로 `LabInstanceProfile`을 사용합니다.
 
-Terraform 설정 파일을 확인한 뒤 다음 순서로 배포합니다.
+### 7.2 인프라 생성
 
 ```bash
-terraform -chdir=infra/terraform init
-terraform -chdir=infra/terraform fmt -check -recursive
-terraform -chdir=infra/terraform validate
-terraform -chdir=infra/terraform plan -out=tfplan
-terraform -chdir=infra/terraform apply "tfplan"
+cd infra/terraform
+
+terraform init
+terraform fmt -check -recursive
+terraform validate
+terraform plan -out=tfplan
+terraform apply "tfplan"
 ```
 
-배포 후 ALB와 S3 주소를 확인합니다.
+배포 후 ALB, S3, RDS 주소를 확인합니다.
 
 ```bash
-terraform -chdir=infra/terraform output
+terraform output
 ```
+
+### 7.3 대시보드 S3 업로드
 
 React 대시보드는 ALB 주소를 API Base URL로 넣어 빌드한 뒤 S3에 업로드합니다. 재배포할 때는 아래 스크립트가 현재 ALB DNS를 찾아 대시보드를 빌드하고, `/runtime-config.json`까지 갱신한 뒤 S3에 동기화합니다.
 
 ```bash
+cd ../..
 scripts/deploy-dashboard.sh
 ```
 
-## 9. 테스트 방법
+### 7.4 배포 확인과 삭제
+
+```bash
+cd infra/terraform
+
+ALB_URL="$(terraform output -raw alb_dns_name)"
+curl -i "http://$ALB_URL/health"
+```
+
+제출 또는 시연이 끝난 뒤에는 비용 방지를 위해 리소스를 삭제합니다.
+
+```bash
+terraform destroy
+```
+
+## 8. 테스트 방법
 
 ### API Health Check
 
@@ -150,18 +161,12 @@ curl -i "$ALB_URL/health"
 
 ### 에러 이벤트 수집 테스트
 
-대시보드에서 서비스를 생성해 API Key를 발급받은 뒤, 샘플 서버나 SDK를 통해 에러를 전송합니다.
-
-```bash
-curl -i http://localhost:4100/error/db
-curl -i http://localhost:4100/error/auth
-curl -i http://localhost:4100/error/async
-```
+S3 이벤트 전송 테스트 사이트에서 관리자 비밀번호로 테스트 서비스를 생성한 뒤 4xx/5xx 이벤트를 전송합니다. 운영 서버에 붙일 때는 대시보드에서 발급한 Service API Key를 SDK 또는 `/api/events` HTTP 요청에 사용합니다.
 
 ### k6 부하 테스트
 
 ```bash
-BASE_URL=http://localhost:4000 PERROR_API_KEY=perror_xxxxx k6 run tests/load/events.js
+BASE_URL=http://<alb-dns-name> PERROR_API_KEY=perror_xxxxx k6 run tests/load/events.js
 ```
 
 ### S3 이벤트 전송 테스트
@@ -177,7 +182,7 @@ S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 
 -> 대시보드에서 이벤트와 이슈 증가 확인
 ```
 
-## 10. 이슈 그룹화 방식
+## 9. 이슈 그룹화 방식
 
 `pError`는 모든 이벤트를 각각 저장하지만, 대시보드에서는 비슷한 에러를 이슈로 묶어 보여줍니다. 그룹화 기준은 다음과 같습니다.
 
@@ -187,7 +192,7 @@ S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 
 
 예를 들어 부하 테스트에서 30개의 에러 이벤트를 보내더라도 `/api/orders`, `/api/payments`, `/jobs/nightly-sync`처럼 path가 3개로 나뉘면 이슈는 3개 그룹으로 표시될 수 있습니다. 따라서 이벤트 수는 실제 발생 횟수이고, 이슈 수는 같은 원인의 에러를 묶은 그룹 수입니다.
 
-## 11. 검증 결과
+## 10. 검증 결과
 
 다음 항목을 검증했습니다. 자세한 내용은 `docs/test-report.md`에 정리했습니다.
 
@@ -196,14 +201,14 @@ S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 
 - Build 통과
 - Terraform fmt 통과
 - Terraform validate 통과
-- 로컬 API Health Check 통과
-- 샘플 서버 에러 수집 통과
+- API Health Check 통과
+- 테스트 이벤트 수집 통과
 - 이슈 그룹화 동작 확인
 - k6 부하 테스트 통과
 - AWS Academy 환경에서 ALB, EC2 ASG, RDS, S3 배포 확인
 - S3 HTML 이벤트 전송 테스트 사이트를 통한 이벤트 수집 확인
 
-## 12. 직접 구현한 부분
+## 11. 직접 구현한 부분
 
 - pError API 서버
 - 관리자 로그인 및 토큰 기반 인증
@@ -218,30 +223,21 @@ S3에 배포된 `/load-test.html`을 열면 `/runtime-config.json`에 기록된 
 - k6 부하 테스트 스크립트
 - S3 HTML 이벤트 전송 테스트 사이트
 - Terraform 인프라 코드
-- 한국어 README와 제출 문서
+- README와 제출 문서
 
-## 13. AI 도구 및 오픈소스 사용
+## 12. AI 도구 사용
 
-AI 도구는 설계 검토, 코드 작성 보조, 문서 작성 보조, 디버깅 보조 용도로 사용했습니다. 프로젝트의 주제 선정, AWS 구성, 구현 범위, 테스트 흐름은 과제 요구사항에 맞춰 직접 정리했습니다. 타인의 프로젝트를 그대로 가져와 제 작업물처럼 제출하지 않았습니다.
+AI 도구는 설계 검토, 코드 작성 보조, 문서 작성 보조, 디버깅 보조 용도로 사용했습니다. 프로젝트의 주제 선정, AWS 구성, 구현 범위, 테스트 흐름은 과제 요구사항에 맞춰 직접 정리했습니다.
 
-사용한 주요 오픈소스 도구는 다음과 같습니다.
-
-- Express
-- React
-- Vite
-- Prisma
-- PostgreSQL
-- Terraform
-- k6
-
-## 14. 비용 관리
+## 13. 비용 관리
 
 AWS Academy 환경에서도 EC2, ALB, RDS를 장시간 켜두면 크레딧이 소모될 수 있습니다. 따라서 테스트 또는 검토 후에는 다음 명령으로 리소스를 삭제합니다.
 
 ```bash
-terraform -chdir=infra/terraform destroy
+cd infra/terraform
+terraform destroy
 ```
 
-## 15. 제출 요약
+## 14. 제출 요약
 
-본 프로젝트는 AWS 클라우드 컴퓨팅 수업에서 다룬 S3, EC2, Terraform, ALB, ASG, RDS, 부하 테스트, 모니터링 개념을 종합해 구현한 개인 서버 에러 모니터링 웹 서비스입니다. GitHub 저장소에는 소스 코드, Terraform 코드, 로컬 실행 방법, AWS 배포 방법, 테스트 리포트가 포함되어 있습니다.
+본 프로젝트는 AWS 클라우드 컴퓨팅 수업에서 다룬 S3, EC2, Terraform, ALB, ASG, RDS, 부하 테스트, 모니터링 개념을 종합해 구현한 개인 서버 에러 모니터링 웹 서비스입니다. GitHub 저장소에는 소스 코드, Terraform 코드, AWS 배포 방법, 테스트 리포트가 포함되어 있습니다.
