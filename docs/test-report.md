@@ -10,7 +10,7 @@
 
 ## 로컬 환경 메모
 
-현재 저장소는 실제 AWS 리소스를 만들지 않는 것을 원칙으로 합니다. `terraform apply`는 실행하지 않습니다.
+초기 검증은 로컬 Docker Compose 환경에서 진행했고, 최종 검증 단계에서는 AWS Academy 환경에 실제 `ALB + EC2 Auto Scaling Group + RDS + S3` 리소스를 생성해 동작을 확인했습니다.
 
 검증 중 Homebrew로 `k6`, `colima`, `docker`, `docker-compose`를 설치하고 Colima Docker 런타임을 시작했습니다. 이후 Docker Compose 기반 PostgreSQL, 샘플 서버 에러 수집, 대시보드 표시, k6 부하 테스트까지 실제로 수행했습니다.
 
@@ -103,6 +103,11 @@ BASE_URL=http://localhost:4000 PERROR_API_KEY=perror_xxxxx k6 run tests/load/eve
 | Dashboard render | 통과 | Chrome CDP로 로그인 후 이슈 목록/상세 캡처 |
 | k6 | 통과 | 1,800 요청, 실패율 0%, p95 29.44ms |
 | k6 grouping | 통과 | `Load test synthetic server error` occurrences 1,800 |
+| AWS Terraform apply | 통과 | AWS Academy에 ALB, EC2 ASG, RDS, S3 구성 생성 |
+| AWS demo Target Group | 통과 | `4100` 포트 데모 서버 Target 2개 healthy |
+| AWS demo error ingestion | 통과 | `aws-demo` 서비스 2개에서 이벤트/이슈 수집 |
+| AWS ASG instance refresh | 통과 | 최신 Launch Template v5로 교체 완료 |
+| HTML Load Panel | 통과 | 브라우저에서 서비스 생성 후 이벤트 요청 10/10 성공 |
 
 ## 실행된 검증 요약
 
@@ -172,3 +177,185 @@ http_req_duration p(95): 29.44ms
 ```
 
 부하 테스트 후 `Load test synthetic server error` 이슈는 `occurrences: 1800`으로 그룹핑되었습니다.
+
+## AWS 배포 검증 결과
+
+검증 일시: 2026-06-17 KST
+
+실제 AWS Academy 환경에 배포한 `ALB + EC2 Auto Scaling Group + RDS + S3` 구성에서도 같은 시나리오를 실행했습니다.
+
+### 배포 API 스모크 테스트
+
+- ALB DNS: `perror-alb-822516543.us-east-1.elb.amazonaws.com`
+- S3 대시보드: `perror-dashboard-ba6a5faf.s3-website-us-east-1.amazonaws.com`
+- `/health`: `200 OK`
+- `/api/auth/login`: `200 OK`
+- `/api/dashboard/summary`: `200 OK`
+- 테스트 전 상태: `totalEvents: 0`, `openIssues: 0`
+
+### 샘플 서버 에러 수집
+
+로컬 샘플 Express 서버를 실행하고 배포된 pError API로 에러를 전송했습니다.
+
+```text
+GET /ok          -> 200
+GET /error/db    -> 500
+GET /error/auth  -> 500
+GET /error/async -> 500
+GET /error/sync  -> 500
+```
+
+수집 결과:
+
+```json
+{
+  "totalEvents": 4,
+  "openIssues": 4,
+  "sampleIssues": [
+    "Database connection failed",
+    "Random sample failure",
+    "Access token expired",
+    "Background job promise rejected"
+  ]
+}
+```
+
+### AWS 대상 k6 부하 테스트
+
+```bash
+BASE_URL=http://perror-alb-822516543.us-east-1.elb.amazonaws.com \
+PERROR_API_KEY=perror_xxxxx \
+k6 run tests/load/events.js
+```
+
+결과:
+
+```text
+checks_succeeded: 99.41% 1192 out of 1199
+checks_failed:    0.58%  7 out of 1199
+http_req_failed:  0.58%
+http_req_duration p(95): 333.3ms
+```
+
+7건은 일시적인 `i/o timeout`으로 실패했지만, 스크립트 기준인 `http_req_failed < 5%`, `p(95) < 750ms`를 모두 만족했습니다.
+
+부하 테스트 후 `Load test synthetic server error` 이슈는 `occurrences: 1192`로 그룹핑되었습니다.
+
+최종 대시보드 API 요약:
+
+```json
+{
+  "totalEvents": 1196,
+  "openIssues": 5,
+  "recentEvents": 1196
+}
+```
+
+### HA 상태 확인
+
+ALB Target Group과 Auto Scaling Group 상태를 확인했습니다.
+
+```text
+Target Group:
+- i-08b68e879ffaf4135: healthy
+- i-02d90a120369b7de8: healthy
+
+Auto Scaling Group:
+- desired: 2
+- min: 2
+- max: 4
+- i-08b68e879ffaf4135: Healthy / InService
+- i-02d90a120369b7de8: Healthy / InService
+```
+
+### AWS 데모 서버 모니터링 검증
+
+과제 시연을 위해 Terraform에 `enable_demo_server` 옵션을 추가했습니다. 이 옵션을 켜면 pError API가 올라가는 EC2 인스턴스마다 테스트용 Express 서버가 함께 실행되고, ALB의 `4100` 포트를 통해 접근할 수 있습니다. 각 테스트 서버는 시작 시 pError API에 `aws-demo` 서비스로 등록되고, 자신의 API Key로 서버 에러를 전송합니다.
+
+- 데모 서버 URL: `http://perror-alb-822516543.us-east-1.elb.amazonaws.com:4100`
+- 정상 확인: `GET /ok -> 200 OK`
+- 에러 발생 테스트: `GET /error/db -> 500`
+- 추가 에러 요청: `/error/db` 10회 호출, 모두 `500`
+- ASG Instance Refresh: `Successful`, `Percent: 100`, `InstancesToUpdate: 0`
+
+최종 Demo Target Group 상태:
+
+```text
+- i-0cc7d884cb68cb9a0: healthy
+- i-0df46aba4ef5626b5: healthy
+```
+
+최종 대시보드 API 요약:
+
+```json
+{
+  "totalEvents": 1210,
+  "openIssues": 10,
+  "recentEvents": 1210,
+  "awsDemoServices": [
+    {
+      "name": "aws-demo-server-ip-172-31-30-241.ec2.internal",
+      "events": 5,
+      "issues": 1
+    },
+    {
+      "name": "aws-demo-server-ip-172-31-43-147.ec2.internal",
+      "events": 9,
+      "issues": 4
+    }
+  ]
+}
+```
+
+이 검증으로 실제 AWS ALB 뒤의 EC2 서버 2대가 각각 pError에 서비스로 등록되고, 서버에서 발생한 `500` 에러가 RDS에 이벤트/이슈로 저장되는 것을 확인했습니다.
+
+### HTML Load Panel 검증
+
+S3에 함께 배포할 수 있는 정적 HTML 부하 테스트 패널을 추가했습니다. 패널은 `?api=` query string으로 ALB API 주소를 받고, 관리자 비밀번호로 테스트용 서비스를 생성한 뒤 `/api/events`에 에러 이벤트를 전송합니다.
+
+검증 URL:
+
+```text
+http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com/load-test.html?api=http%3A%2F%2Fperror-alb-843534256.us-east-1.elb.amazonaws.com
+```
+
+브라우저 검증 결과:
+
+```json
+{
+  "completed": "10/10",
+  "successRate": "100%",
+  "avg": "309ms",
+  "p95": "611ms",
+  "runStatus": "완료 · 10건 · 9.5 req/s",
+  "connectionStatus": "Health 정상: 204ms"
+}
+```
+
+데스크톱과 모바일 viewport에서 캡처를 확인했고, 한국어 텍스트와 버튼/입력 요소의 겹침은 보이지 않았습니다.
+
+## 제출 전 최종 스모크 테스트
+
+검증 일시: 2026-06-20 KST
+
+현재 Terraform 출력값 기준으로 다음 배포 주소를 확인했습니다.
+
+```text
+ALB DNS: perror-alb-843534256.us-east-1.elb.amazonaws.com
+S3 Dashboard: perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com
+S3 Bucket: perror-dashboard-3864eb15
+RDS Endpoint: perror-postgres.cqlq8uyqke73.us-east-1.rds.amazonaws.com
+```
+
+최종 확인 결과:
+
+| 항목 | 결과 |
+| --- | --- |
+| ALB `/health` | `200 OK` |
+| S3 대시보드 `index.html` | `200 OK` |
+| S3 `/load-test.html` | `200 OK` |
+| Dashboard build | 통과 |
+| Lint | 통과 |
+| SDK 안내 화면 데스크톱/모바일 시각 확인 | 통과 |
+
+SDK 안내 화면에는 `운영 서버 자동 수집`, `프레임워크 무관 수집`, `S3 Load Panel 테스트` 용도를 분리해 표시했습니다. 이로써 pError가 정적 웹사이트 프론트 에러 수집기가 아니라, 백엔드 서버가 보낸 에러 이벤트를 ALB 뒤의 EC2 API 서버에서 수집해 RDS에 저장하는 구조임을 확인할 수 있습니다.
