@@ -53,3 +53,78 @@ SERVICE
 systemctl daemon-reload
 systemctl enable perror-api
 systemctl start perror-api
+
+%{ if enable_demo }
+for attempt in {1..30}; do
+  if curl -fsS http://127.0.0.1:4000/health >/dev/null; then
+    break
+  fi
+  sleep 2
+done
+
+export DEMO_SERVICE_NAME="aws-demo-server-$(hostname)"
+set +x
+DEMO_API_KEY="$(node --input-type=module <<'NODE'
+const baseUrl = "http://127.0.0.1:4000"
+const password = process.env.ADMIN_PASSWORD
+const serviceName = process.env.DEMO_SERVICE_NAME
+
+async function request(path, options = {}) {
+  const response = await fetch(`$${baseUrl}$${path}`, options)
+  const text = await response.text()
+  const body = text.length > 0 ? JSON.parse(text) : null
+  if (!response.ok) {
+    throw new Error(`$${path} failed: $${response.status} $${text}`)
+  }
+  return body
+}
+
+const login = await request("/api/auth/login", {
+  body: JSON.stringify({ password }),
+  headers: { "Content-Type": "application/json" },
+  method: "POST",
+})
+
+const service = await request("/api/services", {
+  body: JSON.stringify({ environment: "aws-demo", name: serviceName }),
+  headers: {
+    Authorization: `Bearer $${login.token}`,
+    "Content-Type": "application/json",
+  },
+  method: "POST",
+})
+
+console.log(service.apiKey)
+NODE
+)"
+
+pnpm --filter @perror/sample-server build
+
+cat > /opt/perror/sample-server.env <<ENV
+PERROR_API_URL="http://127.0.0.1:4000"
+PERROR_API_KEY="$DEMO_API_KEY"
+SAMPLE_PORT="4100"
+ENV
+set -x
+
+cat > /etc/systemd/system/perror-sample-server.service <<SERVICE
+[Unit]
+Description=pError monitored demo Express server
+After=perror-api.service
+Requires=perror-api.service
+
+[Service]
+WorkingDirectory=/opt/perror/apps/sample-server
+EnvironmentFile=/opt/perror/sample-server.env
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+systemctl daemon-reload
+systemctl enable perror-sample-server
+systemctl start perror-sample-server
+%{ endif }

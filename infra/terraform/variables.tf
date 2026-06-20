@@ -42,7 +42,7 @@ variable "ec2_instance_profile_name" {
 variable "ec2_root_volume_size" {
   description = "pnpm install과 API 빌드를 위한 EC2 루트 EBS 볼륨 크기(GB)"
   type        = number
-  default     = 20
+  default     = 30
 }
 
 variable "asg_min_size" {
@@ -61,4 +61,10 @@ variable "asg_max_size" {
   description = "Auto Scaling Group 최대 인스턴스 수"
   type        = number
   default     = 4
+}
+
+variable "enable_demo_server" {
+  description = "pError가 모니터링할 테스트용 Express 서버를 기존 ASG 인스턴스에 함께 실행할지 여부"
+  type        = bool
+  default     = false
 }

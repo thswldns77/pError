@@ -17,3 +17,8 @@ output "rds_endpoint" {
   description = "RDS PostgreSQL endpoint"
   value       = aws_db_instance.postgres.address
 }
+
+output "demo_server_url" {
+  description = "pError가 모니터링할 테스트용 Express 서버 URL"
+  value       = var.enable_demo_server ? "http://${aws_lb.api.dns_name}:4100" : null
+}

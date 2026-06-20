@@ -61,6 +61,17 @@ resource "aws_security_group" "alb" {
     to_port     = 80
   }
 
+  dynamic "ingress" {
+    for_each = var.enable_demo_server ? [1] : []
+
+    content {
+      cidr_blocks = ["0.0.0.0/0"]
+      from_port   = 4100
+      protocol    = "tcp"
+      to_port     = 4100
+    }
+  }
+
   egress {
     cidr_blocks = ["0.0.0.0/0"]
     from_port   = 0
@@ -79,6 +90,17 @@ resource "aws_security_group" "app" {
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
     to_port         = 4000
+  }
+
+  dynamic "ingress" {
+    for_each = var.enable_demo_server ? [1] : []
+
+    content {
+      from_port       = 4100
+      protocol        = "tcp"
+      security_groups = [aws_security_group.alb.id]
+      to_port         = 4100
+    }
   }
 
   egress {
@@ -151,6 +173,24 @@ resource "aws_lb_target_group" "api" {
   }
 }
 
+resource "aws_lb_target_group" "demo" {
+  count = var.enable_demo_server ? 1 : 0
+
+  name     = "${var.project_name}-demo-tg"
+  port     = 4100
+  protocol = "HTTP"
+  vpc_id   = data.aws_vpc.default.id
+
+  health_check {
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = "/ok"
+    timeout             = 5
+    unhealthy_threshold = 2
+  }
+}
+
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.api.arn
   port              = 80
@@ -158,6 +198,19 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     target_group_arn = aws_lb_target_group.api.arn
+    type             = "forward"
+  }
+}
+
+resource "aws_lb_listener" "demo" {
+  count = var.enable_demo_server ? 1 : 0
+
+  load_balancer_arn = aws_lb.api.arn
+  port              = 4100
+  protocol          = "HTTP"
+
+  default_action {
+    target_group_arn = aws_lb_target_group.demo[0].arn
     type             = "forward"
   }
 }
@@ -191,6 +244,7 @@ resource "aws_launch_template" "api" {
     admin_password  = var.admin_password
     auth_secret     = var.auth_secret
     database_url    = "postgresql://perror:${random_password.db.result}@${aws_db_instance.postgres.address}:5432/perror?schema=public"
+    enable_demo     = var.enable_demo_server
     github_repo_url = var.github_repo_url
   }))
 }
@@ -199,7 +253,7 @@ resource "aws_autoscaling_group" "api" {
   desired_capacity    = var.asg_desired_capacity
   max_size            = var.asg_max_size
   min_size            = var.asg_min_size
-  target_group_arns   = [aws_lb_target_group.api.arn]
+  target_group_arns   = var.enable_demo_server ? [aws_lb_target_group.api.arn, aws_lb_target_group.demo[0].arn] : [aws_lb_target_group.api.arn]
   vpc_zone_identifier = data.aws_subnets.compute.ids
 
   launch_template {
