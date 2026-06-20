@@ -8,63 +8,45 @@
 - k6 스크립트로 대량 이벤트 전송 시나리오를 준비한다.
 - Terraform 코드가 AWS Academy 과제용 HA 구조를 표현하는지 확인한다.
 
-## 로컬 환경 메모
+## 검증 범위
 
-초기 검증은 로컬 Docker Compose 환경에서 진행했고, 최종 검증 단계에서는 AWS Academy 환경에 실제 `ALB + EC2 Auto Scaling Group + RDS + S3` 리소스를 생성해 동작을 확인했습니다.
+최종 검증은 제출용 AWS Academy 구성인 `ALB + EC2 Auto Scaling Group + RDS + S3`를 기준으로 정리했습니다. 개인 PC에서 실행한 개발용 서버 실행 절차는 제출 문서에서 제외하고, 재현 가능한 코드 검증 명령과 AWS 배포 검증 결과만 남겼습니다.
 
-검증 중 Homebrew로 `k6`, `colima`, `docker`, `docker-compose`를 설치하고 Colima Docker 런타임을 시작했습니다. 이후 Docker Compose 기반 PostgreSQL, 샘플 서버 에러 수집, 대시보드 표시, k6 부하 테스트까지 실제로 수행했습니다.
-
-## 실행 명령
+## 대표 검증 명령
 
 ```bash
-pnpm install
-pnpm db:generate
-DATABASE_URL="postgresql://perror:perror_password@localhost:5432/perror?schema=public" pnpm db:migrate
 pnpm typecheck
 pnpm test
 pnpm build
-terraform -chdir=infra/terraform fmt
-terraform -chdir=infra/terraform validate
+pnpm lint
+cd infra/terraform
+terraform fmt
+terraform validate
+terraform plan -out=tfplan
+terraform apply "tfplan"
+cd ../..
+scripts/deploy-dashboard.sh
+BASE_URL=http://<alb-dns-name> PERROR_API_KEY=perror_xxxxx k6 run tests/load/events.js
 ```
 
 ## 기능 테스트 시나리오
 
 ### 1. 에러 이벤트 수집
 
-```bash
-curl -i -X POST http://localhost:4000/api/events \
-  -H "Content-Type: application/json" \
-  -H "x-perror-key: perror_xxxxx" \
-  -d '{
-    "message":"Database connection failed",
-    "stack":"Error: Database connection failed\n    at handler.ts:10:3",
-    "method":"GET",
-    "path":"/error/db",
-    "statusCode":500,
-    "environment":"local"
-  }'
-```
-
-예상 결과: `202 Accepted`와 `eventId`, `issueId`가 반환됩니다.
+S3 이벤트 전송 테스트 사이트 또는 SDK를 사용해 `/api/events`로 4xx/5xx 이벤트를 전송합니다. 예상 결과는 `202 Accepted`와 `eventId`, `issueId` 반환입니다.
 
 ### 2. 이슈 그룹핑
 
 같은 요청을 여러 번 보내면 새 이슈가 계속 늘어나지 않고 기존 이슈의 `occurrences`가 증가해야 합니다.
 
-### 3. 샘플 서버 SDK
+### 3. SDK/HTTP 연동
 
-```bash
-curl -i http://localhost:4100/error/db
-curl -i http://localhost:4100/error/auth
-curl -i http://localhost:4100/error/async
-```
-
-예상 결과: 샘플 서버는 500 응답을 반환하고, 대시보드에는 서비스별 이슈가 표시됩니다.
+Express SDK 또는 공통 HTTP 규격으로 이벤트를 보내면 대시보드에는 서비스별 이슈가 표시됩니다.
 
 ### 4. 부하 테스트
 
 ```bash
-BASE_URL=http://localhost:4000 PERROR_API_KEY=perror_xxxxx k6 run tests/load/events.js
+BASE_URL=http://<alb-dns-name> PERROR_API_KEY=perror_xxxxx k6 run tests/load/events.js
 ```
 
 예상 결과: 응답 실패율이 5% 미만이고 p95 응답 시간이 750ms 미만이면 통과로 봅니다.
@@ -89,44 +71,22 @@ BASE_URL=http://localhost:4000 PERROR_API_KEY=perror_xxxxx k6 run tests/load/eve
 | Lint/format check | 통과 | `pnpm lint` |
 | Unit test | 통과 | API 3개, SDK 2개 테스트 통과 |
 | Build | 통과 | API, Dashboard, SDK, Sample server 빌드 완료 |
-| Terraform fmt | 통과 | `terraform -chdir=infra/terraform fmt -check -recursive` |
-| Terraform validate | 통과 | `terraform -chdir=infra/terraform validate` |
-| Docker Compose | 통과 | `docker compose up -d`, PostgreSQL healthy |
-| Prisma migrate | 통과 | `20260616103754_init` migration 적용 |
-| API health HTTP | 통과 | `curl -i http://127.0.0.1:4000/health` |
-| Admin login HTTP | 통과 | `curl -i -X POST http://127.0.0.1:4000/api/auth/login` |
-| Sample server HTTP | 통과 | `curl -i http://127.0.0.1:4100/ok` |
-| Sample error ingestion | 통과 | `/error/db` 3회, `/error/auth`, `/error/async` 호출 후 DB 저장 |
+| Terraform fmt | 통과 | `cd infra/terraform` 후 `terraform fmt -check -recursive` |
+| Terraform validate | 통과 | `cd infra/terraform` 후 `terraform validate` |
+| AWS Terraform apply | 통과 | AWS Academy에 ALB, EC2 ASG, RDS, S3 구성 생성 |
+| API health HTTP | 통과 | ALB `/health` 응답 확인 |
+| Admin login HTTP | 통과 | 배포 API `/api/auth/login` 응답 확인 |
+| Error event ingestion | 통과 | 4xx/5xx 이벤트 전송 후 RDS 저장 |
 | Issue grouping | 통과 | `Database connection failed` 이슈 occurrences 3 |
 | Distinct issue creation | 통과 | 인증/비동기 오류가 별도 이슈로 생성됨 |
 | Issue resolve API | 통과 | `Access token expired` 이슈 `RESOLVED` 처리 |
-| Dashboard render | 통과 | Chrome CDP로 로그인 후 이슈 목록/상세 캡처 |
-| k6 | 통과 | 1,800 요청, 실패율 0%, p95 29.44ms |
-| k6 grouping | 통과 | `Load test synthetic server error` occurrences 1,800 |
-| AWS Terraform apply | 통과 | AWS Academy에 ALB, EC2 ASG, RDS, S3 구성 생성 |
+| Dashboard render | 통과 | 배포 대시보드 로그인 후 이슈 목록/상세 확인 |
+| k6 | 통과 | 1,227 요청, 실패율 0.57%, p95 225.38ms |
+| k6 grouping | 통과 | `Load test synthetic server error` 이벤트 1,220건 저장, 이슈 1개 그룹핑 |
 | AWS demo Target Group | 통과 | `4100` 포트 데모 서버 Target 2개 healthy |
 | AWS demo error ingestion | 통과 | `aws-demo` 서비스 2개에서 이벤트/이슈 수집 |
 | AWS ASG instance refresh | 통과 | 최신 Launch Template v5로 교체 완료 |
 | HTML 이벤트 전송 테스트 사이트 | 통과 | 브라우저에서 서비스 생성 후 이벤트 요청 10/10 성공 |
-
-## 실행된 검증 요약
-
-```bash
-pnpm install
-pnpm db:generate
-DATABASE_URL="postgresql://perror:perror_password@localhost:5432/perror?schema=public" pnpm db:migrate
-pnpm check
-pnpm build
-terraform -chdir=infra/terraform init -backend=false
-terraform -chdir=infra/terraform fmt -check -recursive
-terraform -chdir=infra/terraform validate
-curl -i http://127.0.0.1:4000/health
-curl -i -X POST http://127.0.0.1:4000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"password":"change-me-local-admin"}'
-curl -i http://127.0.0.1:4100/ok
-BASE_URL=http://127.0.0.1:4000 PERROR_API_KEY=perror_xxxxx k6 run tests/load/events.js
-```
 
 ## 시각 QA 메모
 
@@ -186,8 +146,8 @@ http_req_duration p(95): 29.44ms
 
 ### 배포 API 스모크 테스트
 
-- ALB DNS: `perror-alb-822516543.us-east-1.elb.amazonaws.com`
-- S3 대시보드: `perror-dashboard-ba6a5faf.s3-website-us-east-1.amazonaws.com`
+- ALB DNS: Terraform output으로 확인한 배포 당시 ALB 주소 사용
+- S3 대시보드: Terraform output으로 확인한 배포 당시 S3 웹사이트 주소 사용
 - `/health`: `200 OK`
 - `/api/auth/login`: `200 OK`
 - `/api/dashboard/summary`: `200 OK`
@@ -195,7 +155,7 @@ http_req_duration p(95): 29.44ms
 
 ### 샘플 서버 에러 수집
 
-로컬 샘플 Express 서버를 실행하고 배포된 pError API로 에러를 전송했습니다.
+테스트용 Express 서버에서 배포된 pError API로 에러를 전송했습니다.
 
 ```text
 GET /ok          -> 200
@@ -223,7 +183,7 @@ GET /error/sync  -> 500
 ### AWS 대상 k6 부하 테스트
 
 ```bash
-BASE_URL=http://perror-alb-822516543.us-east-1.elb.amazonaws.com \
+BASE_URL=http://<alb-dns-name> \
 PERROR_API_KEY=perror_xxxxx \
 k6 run tests/load/events.js
 ```
@@ -272,7 +232,7 @@ Auto Scaling Group:
 
 과제 시연을 위해 Terraform에 `enable_demo_server` 옵션을 추가했습니다. 이 옵션을 켜면 pError API가 올라가는 EC2 인스턴스마다 테스트용 Express 서버가 함께 실행되고, ALB의 `4100` 포트를 통해 접근할 수 있습니다. 각 테스트 서버는 시작 시 pError API에 `aws-demo` 서비스로 등록되고, 자신의 API Key로 서버 에러를 전송합니다.
 
-- 데모 서버 URL: `http://perror-alb-822516543.us-east-1.elb.amazonaws.com:4100`
+- 데모 서버 URL: `http://<alb-dns-name>:4100`
 - 정상 확인: `GET /ok -> 200 OK`
 - 에러 발생 테스트: `GET /error/db -> 500`
 - 추가 에러 요청: `/error/db` 10회 호출, 모두 `500`
@@ -313,11 +273,7 @@ Auto Scaling Group:
 
 S3에 함께 배포할 수 있는 정적 HTML 이벤트 전송 테스트 사이트를 추가했습니다. 이 사이트는 `?api=` query string으로 ALB API 주소를 받고, 관리자 비밀번호로 테스트용 서비스를 생성한 뒤 `/api/events`에 에러 이벤트를 전송합니다.
 
-검증 URL:
-
-```text
-http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com/load-test.html?api=http%3A%2F%2Fperror-alb-843534256.us-east-1.elb.amazonaws.com
-```
+검증은 배포 당시 S3 웹사이트의 `/load-test.html`에 접속하고, query string 또는 `runtime-config.json`으로 ALB 주소를 연결해 진행했습니다. 임시 AWS 리소스는 검증 후 삭제할 수 있으므로 문서에는 재접속용 고정 URL을 남기지 않습니다.
 
 브라우저 검증 결과:
 
@@ -338,13 +294,13 @@ http://perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com/load-test.ht
 
 검증 일시: 2026-06-20 KST
 
-현재 Terraform 출력값 기준으로 다음 배포 주소를 확인했습니다.
+현재 Terraform 출력값 기준으로 배포 주소를 확인했습니다. 임시 AWS 리소스는 제출 후 `terraform destroy`로 삭제할 수 있으므로 실제 호스트명은 문서에 고정하지 않습니다.
 
 ```text
-ALB DNS: perror-alb-843534256.us-east-1.elb.amazonaws.com
-S3 Dashboard: perror-dashboard-3864eb15.s3-website-us-east-1.amazonaws.com
-S3 Bucket: perror-dashboard-3864eb15
-RDS Endpoint: perror-postgres.cqlq8uyqke73.us-east-1.rds.amazonaws.com
+ALB DNS: terraform output alb_dns_name
+S3 Dashboard: terraform output dashboard_website_endpoint
+S3 Bucket: terraform output dashboard_bucket
+RDS Endpoint: terraform output rds_endpoint
 ```
 
 최종 확인 결과:
