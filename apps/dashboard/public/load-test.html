@@ -446,6 +446,18 @@
                   <option value="Background job promise rejected">Background job promise rejected</option>
                 </select>
               </label>
+              <label>
+                HTTP 상태 코드
+                <select id="statusCode">
+                  <option value="400">400 Bad Request</option>
+                  <option value="401">401 Unauthorized</option>
+                  <option value="403">403 Forbidden</option>
+                  <option value="404">404 Not Found</option>
+                  <option value="429">429 Too Many Requests</option>
+                  <option value="500" selected>500 Internal Server Error</option>
+                  <option value="503">503 Service Unavailable</option>
+                </select>
+              </label>
             </div>
             <div class="button-row">
               <button id="runButton" type="button">실행</button>
@@ -512,6 +524,7 @@
         requestCount: document.querySelector("#requestCount"),
         runButton: document.querySelector("#runButton"),
         runStatus: document.querySelector("#runStatus"),
+        statusCode: document.querySelector("#statusCode"),
         stopButton: document.querySelector("#stopButton"),
         successRateMetric: document.querySelector("#successRateMetric"),
         testMode: document.querySelector("#testMode"),
@@ -634,6 +647,7 @@
       function eventPayload(index) {
         const message = elements.errorMessage.value
         const path = index % 3 === 0 ? "/jobs/nightly-sync" : index % 3 === 1 ? "/api/orders" : "/api/payments"
+        const statusCode = Number(elements.statusCode.value)
         return {
           environment: "html-load-test",
           hostname: window.location.hostname || "local-file",
@@ -643,7 +657,7 @@
           release: "load-panel@1.0.0",
           requestId: `load-${Date.now()}-${index}`,
           stack: `Error: ${message}\n    at load-test.html:${300 + (index % 40)}:7`,
-          statusCode: index % 5 === 0 ? 503 : 500,
+          statusCode,
         }
       }
 

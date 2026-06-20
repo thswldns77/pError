@@ -56,7 +56,7 @@ export function SdkGuide() {
             <Server aria-hidden="true" size={20} />
             <div>
               <h3>운영 서버 자동 수집</h3>
-              <p>Express 서버에 미들웨어를 붙여 500 에러를 자동 전송합니다.</p>
+              <p>Express 서버의 4xx/5xx 응답과 서버 예외를 pError에 자동으로 기록합니다.</p>
             </div>
           </header>
           <div className="snippet-row">

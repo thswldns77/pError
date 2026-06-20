@@ -1,3 +1,4 @@
+import { STATUS_CODES } from "node:http"
 import { hostname } from "node:os"
 import type { NextFunction, Request, Response } from "express"
 import { sendException } from "./client.js"
@@ -10,6 +11,19 @@ type RequestContext = {
 }
 
 const contexts = new WeakMap<Request, RequestContext>()
+const capturedRequests = new WeakSet<Request>()
+
+class HttpResponseError extends Error {
+  readonly name = "HttpResponseError"
+
+  constructor(statusCode: number) {
+    super(`HTTP ${statusCode} ${STATUS_CODES[statusCode] ?? "Unknown Error"}`)
+  }
+}
+
+function isErrorStatus(statusCode: number): boolean {
+  return statusCode >= 400 && statusCode <= 599
+}
 
 function requestIdFrom(request: Request): string | undefined {
   const headerValue = request.headers["x-request-id"]
@@ -46,6 +60,7 @@ export function createPErrorMiddleware(options: PErrorOptions): PErrorMiddleware
         }
 
         const context = contextFrom(request, response)
+        capturedRequests.add(request)
         void sendException(options, error, context).catch((captureError: unknown) => {
           options.onCaptureError?.(captureError)
         })
@@ -57,13 +72,28 @@ export function createPErrorMiddleware(options: PErrorOptions): PErrorMiddleware
       }
     },
     requestHandler() {
-      return (request: Request, _response: Response, next: NextFunction): void => {
+      return (request: Request, response: Response, next: NextFunction): void => {
         const requestId = requestIdFrom(request)
         const context: RequestContext = {
           method: request.method,
           path: request.originalUrl,
         }
         contexts.set(request, requestId === undefined ? context : { ...context, requestId })
+        response.once("finish", () => {
+          if (!isErrorStatus(response.statusCode) || capturedRequests.has(request)) {
+            return
+          }
+
+          const responseContext = contextFrom(request, response)
+          capturedRequests.add(request)
+          void sendException(
+            options,
+            new HttpResponseError(responseContext.statusCode),
+            responseContext,
+          ).catch((captureError: unknown) => {
+            options.onCaptureError?.(captureError)
+          })
+        })
         next()
       }
     },

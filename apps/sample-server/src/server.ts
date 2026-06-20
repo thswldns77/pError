@@ -47,6 +47,14 @@ app.get("/error/auth", () => {
   throw new SampleAuthError()
 })
 
+app.get("/error/bad-request", (_request, response) => {
+  response.status(400).json({ code: "BAD_REQUEST", message: "Invalid request payload" })
+})
+
+app.get("/error/rate-limit", (_request, response) => {
+  response.status(429).json({ code: "RATE_LIMITED", message: "Too many requests" })
+})
+
 app.get("/error/async", async () => {
   await Promise.reject(new SampleAsyncJobError())
 })
